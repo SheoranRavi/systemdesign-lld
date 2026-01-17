@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/sheoranravi/flipkart-p2p/internal/entity"
+	"github.com/sheoranravi/systemdesign-lld/flipkart-p2p/internal/entity"
 )
 
 type InMemoryStore struct {

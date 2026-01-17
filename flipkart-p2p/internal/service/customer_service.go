@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/sheoranravi/flipkart-p2p/internal/entity"
-	"github.com/sheoranravi/flipkart-p2p/internal/store"
+	"github.com/sheoranravi/systemdesign-lld/flipkart-p2p/internal/entity"
+	"github.com/sheoranravi/systemdesign-lld/flipkart-p2p/internal/store"
 )
 
 type CustomerService struct {

@@ -1,6 +1,6 @@
 package store
 
-import "github.com/sheoranravi/flipkart-p2p/internal/entity"
+import "github.com/sheoranravi/systemdesign-lld/flipkart-p2p/internal/entity"
 
 type DriverStore interface {
 	GetDriverByID(id string) (*entity.Driver, error)

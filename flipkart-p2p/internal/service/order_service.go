@@ -3,8 +3,8 @@ package service
 import (
 	"errors"
 
-	"github.com/sheoranravi/flipkart-p2p/internal/entity"
-	"github.com/sheoranravi/flipkart-p2p/internal/store"
+	"github.com/sheoranravi/systemdesign-lld/flipkart-p2p/internal/entity"
+	"github.com/sheoranravi/systemdesign-lld/flipkart-p2p/internal/store"
 )
 
 type OrderService struct {

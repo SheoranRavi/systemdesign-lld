@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sheoranravi/flipkart-p2p/internal/entity"
+	"github.com/sheoranravi/systemdesign-lld/flipkart-p2p/internal/entity"
 )
 
 type AssignmentService struct {
