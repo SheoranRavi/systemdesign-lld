@@ -8,11 +8,12 @@ import (
 )
 
 type OrderService struct {
-	orders store.OrderStore
+	orders    store.OrderStore
+	itemTypes store.ItemTypeStore
 }
 
-func NewOrderService(store store.OrderStore) *OrderService {
-	return &OrderService{orders: store}
+func NewOrderService(store store.OrderStore, itemStore store.ItemTypeStore) *OrderService {
+	return &OrderService{orders: store, itemTypes: itemStore}
 }
 
 func (s *OrderService) Create(
@@ -20,6 +21,10 @@ func (s *OrderService) Create(
 	customerId string,
 	numItems int,
 ) (string, error) {
+	isValid := s.itemTypes.IsValid(itemType)
+	if !isValid {
+		return "", errors.New("This item type is not allowed")
+	}
 	order := &entity.Order{
 		Type:       itemType,
 		CustomerId: customerId,

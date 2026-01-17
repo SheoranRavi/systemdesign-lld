@@ -16,7 +16,7 @@ func main() {
 	memStore := store.NewInMemoryStore()
 
 	customerService := service.NewCustomerService(memStore)
-	orderService := service.NewOrderService(memStore)
+	orderService := service.NewOrderService(memStore, memStore)
 	driverService := service.NewDriverService(memStore, memStore)
 
 	assignmentService := service.NewAssignmentService(orderService, driverService)
