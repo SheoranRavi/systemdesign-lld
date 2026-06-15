@@ -7,20 +7,31 @@ import (
 type RateLimiter struct {
 	// needs redis connection
 	// needs config
-	config RLConfig
-	rdp    *redis.Client
+	config  RLConfig
+	options RlOptions
+	rdb     *redis.Client
 }
 
 func (rl *RateLimiter) start() {
-	rdb := redis.NewClient(&redis.Options{})
+	rl.rdb = redis.NewClient(&redis.Options{
+		Addr:     rl.options.RedisAddr,
+		Password: rl.options.RedisPass,
+		DB:       rl.options.RedisDb,
+	})
 }
 
 func (rl *RateLimiter) IsAllowed(req Request) Response {
 
 }
 
-func Start() *RateLimiter {
-	rl := &RateLimiter{}
+func Start(rlOptions RlOptions) *RateLimiter {
+	rl := &RateLimiter{options: rlOptions}
 	rl.start()
 	return rl
+}
+
+type RlOptions struct {
+	RedisAddr string
+	RedisPass string
+	RedisDb   int
 }
