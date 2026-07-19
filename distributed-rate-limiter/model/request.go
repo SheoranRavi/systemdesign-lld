@@ -1,4 +1,4 @@
-package ratelimiter
+package model
 
 import "time"
 

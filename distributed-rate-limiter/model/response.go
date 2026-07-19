@@ -1,4 +1,4 @@
-package ratelimiter
+package model
 
 type Response struct {
 	StatusCode int
