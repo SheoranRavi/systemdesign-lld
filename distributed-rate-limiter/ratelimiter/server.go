@@ -12,7 +12,12 @@ type RateLimiter struct {
 	rdb     *redis.Client
 }
 
+func (rl *RateLimiter) loadRules() {
+
+}
+
 func (rl *RateLimiter) start() {
+	rl.loadRules()
 	rl.rdb = redis.NewClient(&redis.Options{
 		Addr:     rl.options.RedisAddr,
 		Password: rl.options.RedisPass,
@@ -21,10 +26,14 @@ func (rl *RateLimiter) start() {
 }
 
 func (rl *RateLimiter) IsAllowed(req Request) Response {
+	// look at the rule
+	// call Redis lua script
+	// response
 
+	return Response{}
 }
 
-func Start(rlOptions RlOptions) *RateLimiter {
+func NewRateLimiter(rlOptions RlOptions) *RateLimiter {
 	rl := &RateLimiter{options: rlOptions}
 	rl.start()
 	return rl

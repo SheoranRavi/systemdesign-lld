@@ -1,7 +1,9 @@
 package ratelimiter
 
+import "time"
+
 type Request struct {
-	UserId    string
-	ApiKey    string
-	IpAddress string
+	Client    Client
+	Timestamp time.Time
+	Endpoint  string
 }

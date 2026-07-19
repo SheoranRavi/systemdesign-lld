@@ -38,3 +38,13 @@ When any of these change, the rate limiter can either update it's internal confi
 What happens when the configuration needs to be changed?
 How to introduce a new rule?
 
+
+
+
+
+
+
+- Decide rule storage in etcd
+    - the obj structure
+- Decide which algo to use and what Redis keys would be for each client
+- Code
