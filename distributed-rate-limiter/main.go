@@ -1,6 +1,7 @@
 package distributedratelimiter
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -15,7 +16,8 @@ import (
 
 func main() {
 	etcd := config.GetEtcd(config.EtcdOptions{Address: "localhost:2379"})
-	test.PutTestRules(etcd)
+	ctx := context.Background()
+	test.PutTestRules(ctx, etcd)
 	rlOptions := ratelimiter.RlOptions{RedisAddr: "localhost:6379"}
 	rateLimiter := ratelimiter.NewRateLimiter(rlOptions, etcd)
 
