@@ -1,5 +1,7 @@
 package util
 
+const RULES_KEY string = "/ratelimit/rules/"
+
 func GetRuleKey(ruleBucket string, path string) string {
-	return "/ratelimit/rules/" + ruleBucket + "/" + path
+	return RULES_KEY + ruleBucket + "/" + path
 }

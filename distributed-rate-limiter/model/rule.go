@@ -33,10 +33,10 @@ func (r RuleBucket) String() string {
 	}
 }
 
-type KeyType int
+type KeyType string
 
 const (
-	ApiKey KeyType = iota
-	UserIdKey
-	IpAddressKey
+	ApiKey       KeyType = "ApiKey"
+	UserIdKey    KeyType = "UserIdKey"
+	IpAddressKey KeyType = "IpAddressKey"
 )

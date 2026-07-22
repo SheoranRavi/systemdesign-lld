@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/SheoranRavi/drl/model"
+	"github.com/SheoranRavi/drl/util"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -18,7 +19,7 @@ type Etcd struct {
 func (e *Etcd) GetAllRules(ctx context.Context) map[string]model.Rule {
 	// rules be like /ratelimit/rules/authorized/v1/profile
 	rules := make(map[string]model.Rule)
-	resp, err := e.client.Get(ctx, "/ratelimit/rules/", clientv3.WithPrefix())
+	resp, err := e.client.Get(ctx, util.RULES_KEY, clientv3.WithPrefix())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,6 +30,19 @@ func (e *Etcd) GetAllRules(ctx context.Context) map[string]model.Rule {
 		rules[key] = rule
 	}
 	return rules
+}
+
+func (e *Etcd) Put(ctx context.Context, key string, value string) {
+	e.client.Put(ctx, key, value)
+}
+
+func (e *Etcd) GetWatchCh(ctx context.Context) clientv3.WatchChan {
+	watchCh := e.client.Watch(
+		ctx,
+		util.RULES_KEY,
+		clientv3.WithPrefix(),
+	)
+	return watchCh
 }
 
 func (e *Etcd) connect() {
