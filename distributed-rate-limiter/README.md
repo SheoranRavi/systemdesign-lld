@@ -103,6 +103,30 @@ default server scale and remove extra server containers.
 Nginx resolves the Docker `server` service dynamically, so newly created or
 removed server replicas are picked up without retaining stale container IPs.
 
+## Performance optimizations
+
+The test client and rate limiter include several throughput-oriented
+optimizations:
+
+- The client drains each response body before closing it:
+
+  ```go
+  io.Copy(io.Discard, resp.Body)
+  resp.Body.Close()
+  ```
+
+  Draining the body allows Go's HTTP transport to reuse persistent TCP
+  connections instead of repeatedly establishing new connections.
+
+- The client uses one shared `http.Client` and a tuned `http.Transport` with
+  connection pooling and high `MaxIdleConnsPerHost` settings.
+- Request JSON payloads are pre-generated before the benchmark starts, keeping
+  request generation and JSON encoding out of the measured request loop.
+- The rate limiter uses an atomic Redis Lua script, so token refill and token
+  consumption happen in one Redis operation without a read-modify-write race.
+- Server replicas share Redis state, allowing any server instance to process a
+  request for any client bucket.
+
 Inspect containers and output:
 
 ```bash
