@@ -13,8 +13,8 @@ services:
       - --initial-cluster=node1=http://etcd:2380
       - --initial-cluster-token=etcd-cluster
       - --initial-cluster-state=new
-    expose:
-      - "2379"
+    ports:
+      - "2379:2379"
     volumes:
       - etcd-data:/etcd-data
     healthcheck:
@@ -70,9 +70,9 @@ services:
       target: client
     environment:
       TARGET_URL: http://loadbalancer:8080/checkRateLimit
-      TOTAL_REQUESTS: "1000000"
+      TOTAL_REQUESTS: "100000"
       CONCURRENCY: "200"
-      UNIQUE_CLIENTS: "100000"
+      UNIQUE_CLIENTS: "1000"
       CPU_PROFILE: /tmp/cpu.prof
     depends_on:
       - loadbalancer

@@ -14,8 +14,8 @@ func PutTestRules(ctx context.Context, etcd *config.Etcd) {
 	rule := model.Rule{
 		RuleBucket: model.UnAuthedRule,
 		Endpoint:   "/login",
-		MaxTokens:  1000,
-		RefillRate: 500,
+		MaxTokens:  100,
+		RefillRate: 50,
 	}
 
 	ruleString, _ := json.Marshal(rule)
@@ -24,8 +24,8 @@ func PutTestRules(ctx context.Context, etcd *config.Etcd) {
 	rule = model.Rule{
 		RuleBucket: model.UnAuthedRule,
 		Endpoint:   "/signup",
-		MaxTokens:  200,
-		RefillRate: 100,
+		MaxTokens:  20,
+		RefillRate: 10,
 	}
 	ruleString, _ = json.Marshal(rule)
 	etcd.Put(ctx, util.GetRuleKey(model.UnAuthedRule.String(), "/signup"), string(ruleString))
@@ -33,8 +33,8 @@ func PutTestRules(ctx context.Context, etcd *config.Etcd) {
 	rule = model.Rule{
 		RuleBucket: model.ApiKeyRule,
 		Endpoint:   "/getgeo",
-		MaxTokens:  10000,
-		RefillRate: 1000,
+		MaxTokens:  1000,
+		RefillRate: 100,
 	}
 	ruleString, _ = json.Marshal(rule)
 	etcd.Put(ctx, util.GetRuleKey(model.ApiKeyRule.String(), "/getgeo"), string(ruleString))
