@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
+	"runtime/pprof"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -15,8 +18,8 @@ import (
 
 const (
 	URL            = "http://localhost:8080/checkRateLimit"
-	TotalRequests  = 10000
-	Concurrency    = 100
+	TotalRequests  = 100000
+	Concurrency    = 1000
 	UniqueClients  = 100
 	RequestTimeout = 5 * time.Second
 )
@@ -40,8 +43,15 @@ var (
 		"/getgeo": "ApiKey",
 	}
 
+	transport = &http.Transport{
+		MaxIdleConns:        1000,
+		MaxIdleConnsPerHost: 1000,
+		MaxConnsPerHost:     1000,
+		IdleConnTimeout:     90 * time.Second,
+	}
 	httpClient = &http.Client{
-		Timeout: RequestTimeout,
+		Transport: transport,
+		Timeout:   RequestTimeout,
 	}
 
 	success atomic.Int64
@@ -98,7 +108,7 @@ func worker(jobs <-chan struct{}, wg *sync.WaitGroup) {
 		}
 
 		recordStatus(resp.StatusCode)
-
+		io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 
 		if resp.StatusCode == http.StatusOK {
@@ -110,7 +120,17 @@ func worker(jobs <-chan struct{}, wg *sync.WaitGroup) {
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
+
+	f, err := os.Create("cpu.prof")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	if err := pprof.StartCPUProfile(f); err != nil {
+		panic(err)
+	}
+	defer pprof.StopCPUProfile()
 
 	jobs := make(chan struct{}, Concurrency)
 
