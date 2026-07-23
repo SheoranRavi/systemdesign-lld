@@ -19,7 +19,7 @@ import (
 const (
 	URL            = "http://localhost:8080/checkRateLimit"
 	TotalRequests  = 100000
-	Concurrency    = 1000
+	Concurrency    = 400
 	UniqueClients  = 100
 	RequestTimeout = 5 * time.Second
 )
@@ -85,17 +85,11 @@ func randomRequest() RlRequest {
 	}
 }
 
-func worker(jobs <-chan struct{}, wg *sync.WaitGroup) {
+func worker(jobs <-chan []byte, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	for range jobs {
-		req := randomRequest()
-
-		body, err := json.Marshal(req)
-		if err != nil {
-			failed.Add(1)
-			continue
-		}
+	for req := range jobs {
+		body := req
 
 		resp, err := httpClient.Post(
 			URL,
@@ -132,7 +126,13 @@ func main() {
 	}
 	defer pprof.StopCPUProfile()
 
-	jobs := make(chan struct{}, Concurrency)
+	jobs := make(chan []byte, Concurrency)
+	// pre-generate requests
+	var requests [TotalRequests][]byte
+	for i := 0; i < TotalRequests; i++ {
+		req, _ := json.Marshal(randomRequest())
+		requests[i] = req
+	}
 
 	var wg sync.WaitGroup
 
@@ -144,7 +144,7 @@ func main() {
 	}
 
 	for i := 0; i < TotalRequests; i++ {
-		jobs <- struct{}{}
+		jobs <- requests[i]
 	}
 
 	close(jobs)

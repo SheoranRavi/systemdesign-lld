@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/SheoranRavi/drl/config"
 	"github.com/SheoranRavi/drl/model"
 	"github.com/SheoranRavi/drl/ratelimiter"
@@ -73,9 +75,7 @@ func (rlh *RateLimitHandler) IsAllowedHandler(w http.ResponseWriter, r *http.Req
 	}
 	res := rlh.rateLimiter.IsAllowed(req)
 	w.WriteHeader(res.StatusCode)
-	log.Printf("Status Code: %d, message: %s\n", res.StatusCode, res.Message)
-	resByte, _ := json.Marshal(res)
-	w.Write(resByte)
+	json.NewEncoder(w).Encode(res)
 }
 
 type RlRequest struct {
