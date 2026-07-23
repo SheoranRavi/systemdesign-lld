@@ -11,17 +11,25 @@ import (
 	"os"
 	"runtime/pprof"
 	"sort"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
 const (
-	URL            = "http://localhost:8080/checkRateLimit"
-	TotalRequests  = 100000
-	Concurrency    = 400
-	UniqueClients  = 100
-	RequestTimeout = 5 * time.Second
+	defaultURL            = "http://localhost:8080/checkRateLimit"
+	defaultTotalRequests  = 100000
+	defaultConcurrency    = 400
+	defaultUniqueClients  = 100
+	defaultRequestTimeout = 5 * time.Second
+)
+
+var (
+	targetURL     = defaultURL
+	totalRequests = defaultTotalRequests
+	concurrency   = defaultConcurrency
+	uniqueClients = defaultUniqueClients
 )
 
 type RlRequest struct {
@@ -51,7 +59,7 @@ var (
 	}
 	httpClient = &http.Client{
 		Transport: transport,
-		Timeout:   RequestTimeout,
+		Timeout:   defaultRequestTimeout,
 	}
 
 	success atomic.Int64
@@ -73,9 +81,9 @@ func randomRequest() RlRequest {
 
 	var value string
 	if key == "IpAddressKey" {
-		value = fmt.Sprintf("192.168.1.%d", rand.Intn(UniqueClients))
+		value = fmt.Sprintf("192.168.1.%d", rand.Intn(uniqueClients))
 	} else {
-		value = fmt.Sprintf("api-key-%d", rand.Intn(UniqueClients))
+		value = fmt.Sprintf("api-key-%d", rand.Intn(uniqueClients))
 	}
 
 	return RlRequest{
@@ -92,7 +100,7 @@ func worker(jobs <-chan []byte, wg *sync.WaitGroup) {
 		body := req
 
 		resp, err := httpClient.Post(
-			URL,
+			targetURL,
 			"application/json",
 			bytes.NewReader(body),
 		)
@@ -114,8 +122,16 @@ func worker(jobs <-chan []byte, wg *sync.WaitGroup) {
 }
 
 func main() {
+	targetURL = envOrDefault("TARGET_URL", defaultURL)
+	totalRequests = envIntOrDefault("TOTAL_REQUESTS", defaultTotalRequests)
+	concurrency = envIntOrDefault("CONCURRENCY", defaultConcurrency)
+	uniqueClients = envIntOrDefault("UNIQUE_CLIENTS", defaultUniqueClients)
+	if totalRequests <= 0 || concurrency <= 0 || uniqueClients <= 0 {
+		log.Fatal("TOTAL_REQUESTS, CONCURRENCY, and UNIQUE_CLIENTS must be positive")
+	}
 
-	f, err := os.Create("cpu.prof")
+	profilePath := envOrDefault("CPU_PROFILE", "cpu.prof")
+	f, err := os.Create(profilePath)
 	if err != nil {
 		panic(err)
 	}
@@ -126,10 +142,10 @@ func main() {
 	}
 	defer pprof.StopCPUProfile()
 
-	jobs := make(chan []byte, Concurrency)
+	jobs := make(chan []byte, concurrency)
 	// pre-generate requests
-	var requests [TotalRequests][]byte
-	for i := 0; i < TotalRequests; i++ {
+	requests := make([][]byte, totalRequests)
+	for i := 0; i < totalRequests; i++ {
 		req, _ := json.Marshal(randomRequest())
 		requests[i] = req
 	}
@@ -138,12 +154,12 @@ func main() {
 
 	start := time.Now()
 
-	for i := 0; i < Concurrency; i++ {
+	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go worker(jobs, &wg)
 	}
 
-	for i := 0; i < TotalRequests; i++ {
+	for i := 0; i < totalRequests; i++ {
 		jobs <- requests[i]
 	}
 
@@ -153,13 +169,13 @@ func main() {
 	elapsed := time.Since(start)
 
 	fmt.Println("====================================")
-	fmt.Printf("Requests      : %d\n", TotalRequests)
-	fmt.Printf("Concurrency   : %d\n", Concurrency)
+	fmt.Printf("Requests      : %d\n", totalRequests)
+	fmt.Printf("Concurrency   : %d\n", concurrency)
 	fmt.Printf("Success       : %d\n", success.Load())
 	fmt.Printf("Failed        : %d\n", failed.Load())
 	fmt.Printf("Duration      : %v\n", elapsed)
-	fmt.Printf("Req/sec       : %.2f\n", float64(TotalRequests)/elapsed.Seconds())
-	fmt.Printf("Avg latency   : %v\n", elapsed/time.Duration(TotalRequests))
+	fmt.Printf("Req/sec       : %.2f\n", float64(totalRequests)/elapsed.Seconds())
+	fmt.Printf("Avg latency   : %v\n", elapsed/time.Duration(totalRequests))
 
 	statusMu.Lock()
 	statusCodes := make([]int, 0, len(statusCount))
@@ -176,6 +192,25 @@ func main() {
 
 	if failed.Load() > 0 {
 		log.Printf("%d requests failed\n", failed.Load())
-		log.Printf("%f percent requests failed\n", (float64(failed.Load())/float64(TotalRequests))*100)
+		log.Printf("%f percent requests failed\n", (float64(failed.Load())/float64(totalRequests))*100)
 	}
+}
+
+func envOrDefault(name, fallback string) string {
+	if value := os.Getenv(name); value != "" {
+		return value
+	}
+	return fallback
+}
+
+func envIntOrDefault(name string, fallback int) int {
+	value := os.Getenv(name)
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		log.Fatalf("invalid integer for %s: %v", name, err)
+	}
+	return parsed
 }

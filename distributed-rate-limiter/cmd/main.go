@@ -17,24 +17,28 @@ import (
 )
 
 func main() {
-	etcd := config.GetEtcd(config.EtcdOptions{Address: "localhost:2379"})
+	etcd := config.GetEtcd(config.EtcdOptions{Address: envOrDefault("ETCD_ADDR", "localhost:2379")})
 	ctx := context.Background()
 	test.PutTestRules(ctx, etcd)
-	rlOptions := ratelimiter.RlOptions{RedisAddr: "localhost:6379"}
+	rlOptions := ratelimiter.RlOptions{RedisAddr: envOrDefault("REDIS_ADDR", "localhost:6379")}
 	rateLimiter := ratelimiter.NewRateLimiter(rlOptions, etcd)
 
 	rlh := NewRateLimitHandler(rateLimiter)
 	http.HandleFunc("/checkRateLimit", rlh.IsAllowedHandler)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	port := envOrDefault("PORT", "8080")
 
 	log.Printf("Server starting on port %s", port)
 	if err := http.ListenAndServe("0.0.0.0:"+port, nil); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
+}
+
+func envOrDefault(name, fallback string) string {
+	if value := os.Getenv(name); value != "" {
+		return value
+	}
+	return fallback
 }
 
 type RateLimitHandler struct {
