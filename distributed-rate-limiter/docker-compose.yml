@@ -1,0 +1,83 @@
+services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.18
+    restart: unless-stopped
+    command:
+      - /usr/local/bin/etcd
+      - --name=node1
+      - --data-dir=/etcd-data
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://etcd:2379
+      - --listen-peer-urls=http://0.0.0.0:2380
+      - --initial-advertise-peer-urls=http://etcd:2380
+      - --initial-cluster=node1=http://etcd:2380
+      - --initial-cluster-token=etcd-cluster
+      - --initial-cluster-state=new
+    ports:
+      - "2379:2379"
+    volumes:
+      - etcd-data:/etcd-data
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/etcdctl", "endpoint", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    build:
+      context: .
+      target: server
+    environment:
+      ETCD_ADDR: etcd:2379
+      REDIS_ADDR: redis:6379
+      PORT: "8080"
+    deploy:
+      replicas: 2
+    expose:
+      - "8080"
+    depends_on:
+      etcd:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  loadbalancer:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      - server
+
+  client:
+    build:
+      context: .
+      target: client
+    environment:
+      TARGET_URL: http://loadbalancer:8080/checkRateLimit
+      TOTAL_REQUESTS: "100000"
+      CONCURRENCY: "200"
+      UNIQUE_CLIENTS: "1000"
+      CPU_PROFILE: /tmp/cpu.prof
+    depends_on:
+      - loadbalancer
+    restart: "no"
+
+volumes:
+  etcd-data:
+  redis-data:
