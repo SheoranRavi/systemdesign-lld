@@ -194,3 +194,6 @@ For comparable tests, record:
 - HTTP 200, 429, 502, and 5xx rates
 - latency percentiles, if available
 - CPU and memory for clients, Nginx, servers, and Redis
+
+### go-wrk
+`go-wrk -M POST -H "Content-Type: application/json" -body '{"endpoint":"/getgeo","clientKey":"ApiKey","clientValue":"128.0.1.1"}' -c 128 -d 10 http://localhost:8080/checkRateLimit`
