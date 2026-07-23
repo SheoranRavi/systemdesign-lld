@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,9 +34,10 @@ var (
 		"/getgeo",
 	}
 
-	clientKeys = []string{
-		"IpAddressKey",
-		"ApiKey",
+	endpointClientKeys = map[string]string{
+		"/login":  "IpAddressKey",
+		"/signup": "IpAddressKey",
+		"/getgeo": "ApiKey",
 	}
 
 	httpClient = &http.Client{
@@ -44,10 +46,20 @@ var (
 
 	success atomic.Int64
 	failed  atomic.Int64
+
+	statusMu    sync.Mutex
+	statusCount = make(map[int]int64)
 )
 
+func recordStatus(statusCode int) {
+	statusMu.Lock()
+	statusCount[statusCode]++
+	statusMu.Unlock()
+}
+
 func randomRequest() RlRequest {
-	key := clientKeys[rand.Intn(len(clientKeys))]
+	endpoint := endpoints[rand.Intn(len(endpoints))]
+	key := endpointClientKeys[endpoint]
 
 	var value string
 	if key == "IpAddressKey" {
@@ -57,7 +69,7 @@ func randomRequest() RlRequest {
 	}
 
 	return RlRequest{
-		Endpoint:    endpoints[rand.Intn(len(endpoints))],
+		Endpoint:    endpoint,
 		ClientKey:   key,
 		ClientValue: value,
 	}
@@ -84,6 +96,8 @@ func worker(jobs <-chan struct{}, wg *sync.WaitGroup) {
 			failed.Add(1)
 			continue
 		}
+
+		recordStatus(resp.StatusCode)
 
 		resp.Body.Close()
 
@@ -126,6 +140,18 @@ func main() {
 	fmt.Printf("Duration      : %v\n", elapsed)
 	fmt.Printf("Req/sec       : %.2f\n", float64(TotalRequests)/elapsed.Seconds())
 	fmt.Printf("Avg latency   : %v\n", elapsed/time.Duration(TotalRequests))
+
+	statusMu.Lock()
+	statusCodes := make([]int, 0, len(statusCount))
+	for statusCode := range statusCount {
+		statusCodes = append(statusCodes, statusCode)
+	}
+	sort.Ints(statusCodes)
+	for _, statusCode := range statusCodes {
+		fmt.Printf("HTTP %d       : %d\n", statusCode, statusCount[statusCode])
+	}
+	statusMu.Unlock()
+
 	fmt.Println("====================================")
 
 	if failed.Load() > 0 {
