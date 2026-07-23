@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/SheoranRavi/drl/config"
@@ -40,7 +41,7 @@ if tokens >= 1 then
 end
 
 redis.call('HSET', KEYS[1], 'tokens', tokens, 'last_refill_ms', now_ms)
-redis.call('PEXPIRE', KEYS[1], math.max(1000, math.ceil(max_tokens / refill_rate * 2000)))
+redis.call('PEXPIRE', KEYS[1], math.max(10000, math.ceil(max_tokens / refill_rate * 2000)))
 return allowed
 `)
 
@@ -108,6 +109,8 @@ func (rl *RateLimiter) IsAllowed(req model.Request) model.Response {
 	}
 
 	if rule.MaxTokens <= 0 || rule.RefillRate <= 0 {
+		ruleStr, _ := json.Marshal(rule)
+		log.Printf("Invalid Rule: %s, ruleKey: %s\n", string(ruleStr), ruleKey)
 		return model.Response{IsAllowed: false, StatusCode: http.StatusInternalServerError, Message: "Invalid rate-limit rule"}
 	}
 	if rl.rdb == nil {
@@ -116,7 +119,7 @@ func (rl *RateLimiter) IsAllowed(req model.Request) model.Response {
 
 	// Keep a separate bucket for every client, rule bucket, and endpoint.
 	// The key is passed as KEYS[1]; limits are passed as ARGV[1] and ARGV[2].
-	bucketKey := fmt.Sprintf("ratelimit:%d:%s:%s", req.Client.Key, ruleKey, req.Client.Value)
+	bucketKey := fmt.Sprintf("ratelimit:%s:%s:%s", req.Client.Key, ruleKey, req.Client.Value)
 	allowed, err := tokenBucketScript.Run(
 		context.Background(), rl.rdb, []string{bucketKey}, rule.MaxTokens, rule.RefillRate,
 	).Int()

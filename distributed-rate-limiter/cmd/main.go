@@ -1,4 +1,4 @@
-package distributedratelimiter
+package main
 
 import (
 	"context"
@@ -46,17 +46,20 @@ func NewRateLimitHandler(rateLimiter *ratelimiter.RateLimiter) *RateLimitHandler
 func (rlh *RateLimitHandler) IsAllowedHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		log.Printf("Method not allowed\n")
 		return
 	}
 
 	var rlReq RlRequest
 	if err := json.NewDecoder(r.Body).Decode(&rlReq); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
+		log.Printf("Invalid request body\n")
 		return
 	}
 
 	if rlReq.Endpoint == "" || rlReq.ClientKey == "" || rlReq.ClientValue == "" {
 		http.Error(w, "missing required fields", http.StatusBadRequest)
+		log.Printf("Missing required fields\n")
 		return
 	}
 
@@ -70,6 +73,7 @@ func (rlh *RateLimitHandler) IsAllowedHandler(w http.ResponseWriter, r *http.Req
 	}
 	res := rlh.rateLimiter.IsAllowed(req)
 	w.WriteHeader(res.StatusCode)
+	log.Printf("Status Code: %d, message: %s\n", res.StatusCode, res.Message)
 	resByte, _ := json.Marshal(res)
 	w.Write(resByte)
 }
